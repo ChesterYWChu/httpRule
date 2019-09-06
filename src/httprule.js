@@ -1,0 +1,1 @@
+module.HTTPRule = "http rule";
