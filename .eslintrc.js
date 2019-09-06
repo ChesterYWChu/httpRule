@@ -1,6 +1,7 @@
 module.exports = {
   env: {
     es6: true,
+    "mocha": true,
   },
   extends: [
     'airbnb-base',
@@ -13,5 +14,7 @@ module.exports = {
     ecmaVersion: 2018,
     sourceType: 'module',
   },
-  rules: {},
+  rules: {
+    'no-console': process.env.NODE_ENV === 'production' ? ["warn"] : ["off"],
+  },
 };
