@@ -1,1 +1,1 @@
-module.HTTPRule = "http rule";
+module.HTTPRule = 'http rule';
