@@ -11,7 +11,7 @@ const OPTIONS = {
   },
   KEY_IO: 'io',
   IO: {
-    FILE_PATH: 'file_path',
+    FILE: 'file',
     STREAM: 'stream',
   },
 };
@@ -55,7 +55,7 @@ function HTTPTransformer(opt) {
   }
   if (OPTIONS.KEY_IO in opt) {
     if (!Object.values(OPTIONS.IO).includes(opt[OPTIONS.KEY_IO])) {
-      throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file_path"|"stream"`);
+      throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
     }
     this.io = opt[OPTIONS.KEY_IO];
   }
@@ -94,7 +94,7 @@ HTTPTransformer.prototype = {
     return this.parser(data);
   },
   readData(input) {
-    if (this.io === OPTIONS.IO.FILE_PATH) {
+    if (this.io === OPTIONS.IO.FILE) {
       try {
         const data = fs.readFileSync(input, 'utf8');
         return data;
@@ -113,7 +113,7 @@ HTTPTransformer.prototype = {
       });
       return input.on('end', () => data);
     }
-    throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file_path"|"stream"`);
+    throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
   },
   loadParser(format) {
     let parser;
@@ -122,7 +122,7 @@ HTTPTransformer.prototype = {
         parser = request.JSONParser;
         break;
       case OPTIONS.FORMAT.YAML:
-        // parser = require('./lib/types/json');
+        parser = request.YAMLParser;
         break;
       default:
         throw new InvalidValueError(`unsurported format: ${format}, should be "json"|"yaml"`);

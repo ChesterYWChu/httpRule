@@ -1,6 +1,7 @@
 import {
   URL,
 } from 'url';
+import yaml from 'js-yaml';
 
 function Request(domain, path, method, headers) {
   this.domain = domain;
@@ -19,29 +20,40 @@ Request.prototype = {
   },
 };
 
-function JSONParser(data) {
+function objToRequestAdapter(obj) {
   let domain = '';
   let path = '';
   let method = '';
   let headers = {};
-  const jsonObj = JSON.parse(data);
-  if ('url' in jsonObj) {
-    const url = new URL(jsonObj.url);
+  if ('url' in obj) {
+    const url = new URL(obj.url);
     domain = url.hostname;
     path = url.pathname;
   }
-  if ('method' in jsonObj) {
-    method = jsonObj.method;
+  if ('method' in obj) {
+    method = obj.method;
   }
-  if ('headers' in jsonObj) {
-    headers = jsonObj.headers;
+  if ('headers' in obj) {
+    headers = obj.headers;
   }
   return new Request(domain, path, method, headers);
 }
 
+function JSONParser(data) {
+  const jsonObj = JSON.parse(data);
+  return objToRequestAdapter(jsonObj);
+}
+
+function YAMLParser(data) {
+  const yamlObj = yaml.safeLoad(data, 'utf8');
+  return objToRequestAdapter(yamlObj);
+}
+
+
 const request = {
   createRequest: (domain, path, method, headers) => new Request(domain, path, method, headers),
   JSONParser,
+  YAMLParser,
 };
 
 export default request;
