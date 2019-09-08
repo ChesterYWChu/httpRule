@@ -59,7 +59,7 @@ describe('#rule 1 - update path', () => {
         'X-SHOPBACK-AGENT': 'anything',
       },
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getDomain()).to.be.equal('www.shopback.com');
     expect(req.getPath()).to.be.equal('/shopback/static/assets');
     expect(req.getMethod()).to.be.equal('GET');
@@ -70,7 +70,7 @@ describe('#rule 1 - update path', () => {
     const req = request.createRequest(
       'http://www.shopback.com/shopback/resource', 'POST', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getDomain()).to.be.equal('www.shopback.com');
     expect(req.getPath()).to.be.equal('/shopback/resource');
     expect(req.getMethod()).to.be.equal('POST');
@@ -81,7 +81,7 @@ describe('#rule 1 - update path', () => {
     const req = request.createRequest(
       'http://www.google.com/some/resource', 'GET', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getDomain()).to.be.equal('www.google.com');
     expect(req.getPath()).to.be.equal('/some/resource');
     expect(req.getMethod()).to.be.equal('GET');
@@ -108,7 +108,7 @@ describe('#rule 2 - has cookie sbcookie', () => {
         Cookie: 'sbcookie=sbvalue; name=value; name2=value2; name3=value3',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     done();
   });
   it('should throw RuleViolationError when cookie key is missing', (done) => {
@@ -117,14 +117,14 @@ describe('#rule 2 - has cookie sbcookie', () => {
         Cookie: 'name=value; name2=value2; name3=value3',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
   it('should throw RuleViolationError when cookie is missing', (done) => {
     const req = request.createRequest(
       'http://www.shopback.com/shopback/me', 'GET', {},
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
 });
@@ -145,7 +145,7 @@ describe('#rule 3 - referer belongs to www.shopback.com', () => {
         referer: 'http://www.shopback.com/some/resource',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     done();
   });
   it('should pass rule with referer https://www.shopback.com/some/resource', (done) => {
@@ -154,14 +154,14 @@ describe('#rule 3 - referer belongs to www.shopback.com', () => {
         referer: 'https://www.shopback.com/some/resource',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     done();
   });
   it('should throw RuleViolationError when referer is missing', (done) => {
     const req = request.createRequest(
       'http://www.google.com/path/to/resource', 'GET', {},
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
   it('should throw RuleViolationError with referer http://www.google.com/some/resource', (done) => {
@@ -170,7 +170,7 @@ describe('#rule 3 - referer belongs to www.shopback.com', () => {
         referer: 'http://www.google.com/some/resource',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
 });
@@ -190,7 +190,7 @@ describe('#rule 4 - add header: From', () => {
     const req = request.createRequest(
       'http://www.shopback.com/shopback/api/path/to/resource', 'GET', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getHeaders()).to.have.property('From');
     expect(req.getHeaders().From).to.be.equal('hello@shopback.com');
     done();
@@ -199,7 +199,7 @@ describe('#rule 4 - add header: From', () => {
     const req = request.createRequest(
       'http://www.shopback.com/shopback/api/', 'GET', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getHeaders()).to.have.property('From');
     expect(req.getHeaders().From).to.be.equal('hello@shopback.com');
     done();
@@ -208,7 +208,7 @@ describe('#rule 4 - add header: From', () => {
     const req = request.createRequest(
       'http://www.shopback.com/some/resource', 'GET', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getHeaders()).to.not.have.property('From');
     done();
   });
@@ -228,7 +228,7 @@ describe('#rule 5 - remove all url query string', () => {
     const req = request.createRequest(
       'http://www.shopback.com/api?query=string&id=1', 'POST', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getURL()).to.be.equal('http://www.shopback.com/api');
     done();
   });
@@ -236,7 +236,7 @@ describe('#rule 5 - remove all url query string', () => {
     const req = request.createRequest(
       'http://user:pass@www.shopback.com:8080/api?query=string&id=1#hash', 'PUT', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getURL()).to.be.equal('http://user:pass@www.shopback.com:8080/api#hash');
     done();
   });
@@ -244,7 +244,7 @@ describe('#rule 5 - remove all url query string', () => {
     const req = request.createRequest(
       'http://user:pass@www.shopback.com:8080/api#hash', 'PUT', {},
     );
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getURL()).to.be.equal('http://user:pass@www.shopback.com:8080/api#hash');
     done();
   });
@@ -266,7 +266,7 @@ describe('#rule 6 - has header', () => {
         'X-SHOPBACK-AGENT': 'value',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     expect(req.getURL()).to.be.equal('http://www.shopback.com/api');
     done();
   });
@@ -276,14 +276,14 @@ describe('#rule 6 - has header', () => {
         'X-GOOGLE-AGENT': 'value',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
   it('should throw RuleViolationError when header X-SHOPBACK-AGENT is missing', (done) => {
     const req = request.createRequest(
       'http://www.shopback.com/api', 'POST',
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
 });
@@ -304,7 +304,7 @@ describe('#rule 7 - has header value', () => {
         'Content-Type': 'application/json',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     done();
   });
   it('should throw RuleViolationError when Content-Type is text/plain', (done) => {
@@ -313,7 +313,7 @@ describe('#rule 7 - has header value', () => {
         'Content-Type': 'text/plain',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
   it('should throw RuleViolationError when Content-Type is missing', (done) => {
@@ -322,7 +322,7 @@ describe('#rule 7 - has header value', () => {
         Cookie: 'key=value;',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
 });
@@ -343,7 +343,7 @@ describe('#rule 8 - has header value for DELETE method', () => {
         'X-SHOPBACK-AGENT': 'AGENT_1',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     done();
   });
   it('should throw RuleViolationError when X-SHOPBACK-AGENT is AGENT_10', (done) => {
@@ -352,7 +352,7 @@ describe('#rule 8 - has header value for DELETE method', () => {
         'X-SHOPBACK-AGENT': 'AGENT_10',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
   it('should throw RuleViolationError when X-SHOPBACK-AGENT is missing', (done) => {
@@ -361,7 +361,7 @@ describe('#rule 8 - has header value for DELETE method', () => {
         Cookie: 'key=value;',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
 });
@@ -381,7 +381,7 @@ describe('#rule 9 - add header with value function', () => {
       },
     );
     const startTime = new Date().getTime();
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getHeaders()).to.have.property('X-SHOPBACK-TIMESTAMP');
     expect(req.getHeaders()['X-SHOPBACK-TIMESTAMP']).to.be.at.least(startTime);
     done();
@@ -393,7 +393,7 @@ describe('#rule 9 - add header with value function', () => {
       },
     );
     const startTime = new Date().getTime();
-    tf.tranformRequest(req);
+    tf.transformRequest(req);
     expect(req.getHeaders()).to.have.property('X-SHOPBACK-TIMESTAMP');
     expect(req.getHeaders()['X-SHOPBACK-TIMESTAMP']).to.be.at.least(startTime);
     done();
@@ -414,7 +414,7 @@ describe('#rule 10 - allow domains', () => {
         'X-SHOPBACK-AGENT': 'AGENT_1',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     done();
   });
   it('should pass rule with domain www.shopback.com.tw', (done) => {
@@ -423,7 +423,7 @@ describe('#rule 10 - allow domains', () => {
         'X-SHOPBACK-AGENT': 'AGENT_1',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.not.throw();
+    expect(tf.transformRequest.bind(tf, req)).to.not.throw();
     done();
   });
   it('should throw RuleViolationError when domain is www.google.com', (done) => {
@@ -432,7 +432,7 @@ describe('#rule 10 - allow domains', () => {
         'X-SHOPBACK-AGENT': 'AGENT_1',
       },
     );
-    expect(tf.tranformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
+    expect(tf.transformRequest.bind(tf, req)).to.throw(httprule.RuleViolationError);
     done();
   });
 });

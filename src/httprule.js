@@ -82,7 +82,7 @@ HTTPTransformer.prototype = {
   transform(input) {
     let req = {};
     req = this.parseInput(input);
-    this.tranformRequest(req);
+    this.transformRequest(req);
   },
   parseInput(input) {
     const data = this.readData(input);
@@ -127,7 +127,7 @@ HTTPTransformer.prototype = {
     }
     return parser;
   },
-  tranformRequest(req) {
+  transformRequest(req) {
     this.rules.forEach((rule) => {
       if (this.matchCondition(req, rule)) {
         this.doActions(req, rule);
