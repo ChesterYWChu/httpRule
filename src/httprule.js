@@ -1,6 +1,6 @@
 import fs from 'fs';
-import EventEmitter from 'events';
 import request from './request';
+import utils from './utils';
 
 const OPTIONS = {
   KEY_NAME: 'name',
@@ -46,22 +46,6 @@ function RuleViolationError(message) {
 RuleViolationError.prototype = Object.create(Error.prototype);
 RuleViolationError.prototype.constructor = RuleViolationError;
 
-function isReadableStream(stream) {
-  return stream instanceof EventEmitter && typeof stream.read === 'function';
-}
-
-// function isWritableStream(stream) {
-//   return stream instanceof EventEmitter && typeof stream.write === 'function' &&
-// typeof stream.end === 'function';
-// }
-
-function isString(input) {
-  if (typeof input === 'string' || input instanceof String) {
-    return true;
-  }
-  return false;
-}
-
 function HTTPTransformer(opt) {
   this.format = OPTIONS.FORMAT.JSON;
   this.io = OPTIONS.IO.FILE;
@@ -106,7 +90,7 @@ HTTPTransformer.prototype = {
   },
   readData(input) {
     if (this.io === OPTIONS.IO.FILE) {
-      if (!isString(input)) {
+      if (!utils.isString(input)) {
         throw new InvalidValueError(`invalid input type: ${typeof input}, should be string`);
       }
       try {
@@ -117,7 +101,7 @@ HTTPTransformer.prototype = {
       }
     }
     if (this.io === OPTIONS.IO.STREAM) {
-      if (!isReadableStream(input)) {
+      if (!utils.isReadableStream(input)) {
         throw new InvalidValueError(`input stream: ${input} is not a Readable Stream`);
       }
 
@@ -158,12 +142,12 @@ HTTPTransformer.prototype = {
         const condition = rule.conditions[key];
         switch (key) {
           case 'domain':
-            if (!condition.includes(req.getDomain())) {
+            if (!utils.matchOneOfURLPatterns(condition, req.getDomain())) {
               return false;
             }
             break;
           case 'path':
-            if (!condition.includes(req.getPath())) {
+            if (!utils.matchOneOfURLPatterns(condition, req.getPath())) {
               return false;
             }
             break;
@@ -191,7 +175,7 @@ HTTPTransformer.prototype = {
 const httprule = {
   createTranformer: (opt) => new HTTPTransformer(opt),
   updatePath(path) {
-    if (!isString(path)) {
+    if (!utils.isString(path)) {
       throw new InvalidValueError(`invalid path type: ${typeof path}, should be string`);
     }
     return (req) => {
@@ -199,7 +183,7 @@ const httprule = {
     };
   },
   hasCookie(key) {
-    if (!isString(key)) {
+    if (!utils.isString(key)) {
       throw new InvalidValueError(`invalid cookie key type: ${typeof key}, should be string`);
     }
     return (req) => {
@@ -209,12 +193,61 @@ const httprule = {
     };
   },
   refererBelongsTo(domain) {
-    if (!isString(domain)) {
+    if (!utils.isString(domain)) {
       throw new InvalidValueError(`invalid referer type: ${typeof domain}, should be string`);
     }
     return (req) => {
       if (!req.refererBelongsTo(domain)) {
         throw new RuleViolationError(`request referer does not belongs to: ${domain}`);
+      }
+    };
+  },
+  addHeader(key, value) {
+    if (!utils.isString(key)) {
+      throw new InvalidValueError(`invalid header key type: ${typeof key}, should be string`);
+    }
+    if (!utils.isString(value) && !utils.isFunction(value)) {
+      throw new InvalidValueError(`invalid header value type: ${typeof value}, should be string or function`);
+    }
+    return (req) => {
+      req.addHeader(key, value);
+    };
+  },
+  removeAllURLQueryString() {
+    return (req) => {
+      req.removeAllURLQueryString();
+    };
+  },
+  hasHeader(key) {
+    if (!utils.isString(key)) {
+      throw new InvalidValueError(`invalid header key type: ${typeof key}, should be string`);
+    }
+    return (req) => {
+      if (!req.hasHeader(key)) {
+        throw new RuleViolationError(`request does not have header: ${key}`);
+      }
+    };
+  },
+  hasHeaderWithValues(key, values) {
+    if (!utils.isString(key)) {
+      throw new InvalidValueError(`invalid header key type: ${typeof key}, should be string`);
+    }
+    if (!utils.isArray(values)) {
+      throw new InvalidValueError(`invalid values type: ${typeof values}, should be Array`);
+    }
+    return (req) => {
+      if (!req.hasHeaderWithValues(key, values)) {
+        throw new RuleViolationError(`request does not have header key: ${key} with value: ${values}`);
+      }
+    };
+  },
+  allowDomains(domains) {
+    if (!utils.isArray(domains)) {
+      throw new InvalidValueError(`invalid allow domains type: ${typeof domains}, should be Array`);
+    }
+    return (req) => {
+      if (!req.allowDomains(domains)) {
+        throw new RuleViolationError(`request domain is not allow, should be one of ${domains}`);
       }
     };
   },

@@ -1,35 +1,61 @@
-import {
-  URL,
-} from 'url';
+import URL from 'url';
 import yaml from 'js-yaml';
 import cookie from 'cookie';
+import utils from './utils';
 
-function Request(domain, path, method, headers) {
-  this.domain = domain;
-  this.path = path;
-  this.method = method;
-  this.headers = headers;
+function InvalidRequestValueError(message) {
+  this.message = message;
+  this.name = 'InvalidValueError';
+  Error.captureStackTrace(this, InvalidRequestValueError);
+}
+InvalidRequestValueError.prototype = Object.create(Error.prototype);
+InvalidRequestValueError.prototype.constructor = InvalidRequestValueError;
+
+function Request(url, method, headers) {
+  this.setURL(url);
+  this.setMethod(method);
+  this.setHeaders(headers);
 }
 
 Request.prototype = {
   constructor: Request,
+  getURL() {
+    return URL.format(this.urlObj);
+  },
+  setURL(url) {
+    this.urlObj = URL.parse(url, false, false);
+  },
   getDomain() {
-    return this.domain;
+    return this.urlObj.hostname;
   },
   setDomain(domain) {
-    this.domain = domain;
+    this.urlObj.hostname = domain;
   },
   getPath() {
-    return this.path;
+    return this.urlObj.pathname;
   },
   setPath(path) {
-    this.path = path;
+    this.urlObj.pathname = path;
   },
   getMethod() {
     return this.method;
   },
   setMethod(method) {
     this.method = method;
+  },
+  getHeaders() {
+    return this.headers;
+  },
+  setHeaders(headers) {
+    if (headers) {
+      if (utils.isObject(headers)) {
+        this.headers = headers;
+      } else {
+        throw new InvalidRequestValueError(`invalid headers type: ${typeof headers}, should be object`);
+      }
+    } else {
+      this.headers = {};
+    }
   },
   hasCookie(key) {
     if (this.headers && 'Cookie' in this.headers) {
@@ -41,33 +67,72 @@ Request.prototype = {
     return false;
   },
   refererBelongsTo(domain) {
-    if (this.headers && 'referer' in this.headers) {
-      const refererURL = new URL(this.headers.referer);
-      if (refererURL.hostname === domain) {
+    if ('referer' in this.headers) {
+      const refererURLObj = URL.parse(this.headers.referer);
+      if (refererURLObj.hostname === domain) {
         return true;
       }
+    }
+    return false;
+  },
+  addHeader(key, value) {
+    if (utils.isFunction(value)) {
+      // value is a function
+      this.headers[key] = value();
+    } else { // value is string
+      this.headers[key] = value;
+    }
+  },
+  hasHeader(key) {
+    if (key in this.headers) {
+      return true;
+    }
+    return false;
+  },
+  hasHeaderWithValues(key, values) {
+    if (key in this.headers) {
+      const value = this.headers[key];
+      if (values.includes(value)) {
+        return true;
+      }
+    }
+    return false;
+  },
+  removeAllURLQueryString() {
+    delete this.urlObj.search;
+  },
+  addURLQueryString(key, value) {
+    const searchParams = new URL.URLSearchParams(this.urlObj.search);
+    searchParams.append(key, value);
+    this.urlObj.search = searchParams.toString();
+  },
+  deleteURLQueryString(key) {
+    const searchParams = new URL.URLSearchParams(this.urlObj.search);
+    searchParams.delete(key);
+    this.urlObj.search = searchParams.toString();
+  },
+  allowDomains(domains) {
+    if (domains.includes(this.getDomain())) {
+      return true;
     }
     return false;
   },
 };
 
 function objToRequestAdapter(obj) {
-  let domain = '';
-  let path = '';
+  let url = '';
   let method = '';
   let headers = {};
-  if ('url' in obj) {
-    const url = new URL(obj.url);
-    domain = url.hostname;
-    path = url.pathname;
+  if ('url' in obj && utils.isString(obj.url)) {
+    url = obj.url;
   }
-  if ('method' in obj) {
+  if ('method' in obj && utils.isString(obj.method)) {
     method = obj.method;
   }
-  if ('headers' in obj) {
+  if ('headers' in obj && utils.isObject(obj.headers)) {
     headers = obj.headers;
   }
-  return new Request(domain, path, method, headers);
+  return new Request(url, method, headers);
 }
 
 function JSONParser(data) {
@@ -82,7 +147,7 @@ function YAMLParser(data) {
 
 
 const request = {
-  createRequest: (domain, path, method, headers) => new Request(domain, path, method, headers),
+  createRequest: (url, method, headers) => new Request(url, method, headers),
   JSONParser,
   YAMLParser,
 };
