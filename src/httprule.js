@@ -16,6 +16,13 @@ const OPTIONS = {
   },
 };
 
+const METHODS = {
+  GET: 'GET',
+  POST: 'POST',
+  PUT: 'PUT',
+  DELETE: 'DELETE',
+};
+
 function InvalidValueError(message) {
   this.message = message;
   this.name = 'InvalidValueError';
@@ -31,6 +38,13 @@ InvalidValueError.prepend = (message, error) => {
   return error;
 };
 
+function RuleViolationError(message) {
+  this.message = message;
+  this.name = 'RuleViolationError';
+  Error.captureStackTrace(this, RuleViolationError);
+}
+RuleViolationError.prototype = Object.create(Error.prototype);
+RuleViolationError.prototype.constructor = RuleViolationError;
 
 function isReadableStream(stream) {
   return stream instanceof EventEmitter && typeof stream.read === 'function';
@@ -41,24 +55,34 @@ function isReadableStream(stream) {
 // typeof stream.end === 'function';
 // }
 
+function isString(input) {
+  if (typeof input === 'string' || input instanceof String) {
+    return true;
+  }
+  return false;
+}
 
 function HTTPTransformer(opt) {
-  if (OPTIONS.KEY_NAME in opt) {
-    this.name = opt[OPTIONS.KEY_NAME];
-  }
-  if (OPTIONS.KEY_FORMAT in opt) {
-    if (!Object.values(OPTIONS.FORMAT).includes(opt[OPTIONS.KEY_FORMAT])) {
-      throw new InvalidValueError(`unsurported format: ${opt[OPTIONS.KEY_FORMAT]}, should be "json"|"yaml"`);
+  this.format = OPTIONS.FORMAT.JSON;
+  this.io = OPTIONS.IO.FILE;
+  if (typeof opt === 'object') {
+    if (OPTIONS.KEY_NAME in opt) {
+      this.name = opt[OPTIONS.KEY_NAME];
     }
-    this.format = opt[OPTIONS.KEY_FORMAT];
-    this.parser = this.loadParser(this.format);
-  }
-  if (OPTIONS.KEY_IO in opt) {
-    if (!Object.values(OPTIONS.IO).includes(opt[OPTIONS.KEY_IO])) {
-      throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
+    if (OPTIONS.KEY_FORMAT in opt) {
+      if (!Object.values(OPTIONS.FORMAT).includes(opt[OPTIONS.KEY_FORMAT])) {
+        throw new InvalidValueError(`unsurported format: ${opt[OPTIONS.KEY_FORMAT]}, should be "json"|"yaml"`);
+      }
+      this.format = opt[OPTIONS.KEY_FORMAT];
     }
-    this.io = opt[OPTIONS.KEY_IO];
+    if (OPTIONS.KEY_IO in opt) {
+      if (!Object.values(OPTIONS.IO).includes(opt[OPTIONS.KEY_IO])) {
+        throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
+      }
+      this.io = opt[OPTIONS.KEY_IO];
+    }
   }
+  this.parser = this.loadParser(this.format);
   this.rules = [];
 }
 
@@ -73,28 +97,18 @@ HTTPTransformer.prototype = {
   },
   transform(input) {
     let req = {};
-    try {
-      req = this.parseInput(input);
-    } catch (error) {
-      // if (key in object) {
-      //   throw InvalidValueError.prepend(`in property "${  key  }"`, error);
-      // } else {
-      //   throw new InvalidValueError(`missing property "${  key  }"`);
-      // }
-    }
-    this.rules.forEach((rule) => {
-      if (this.matchCondition(req, rule)) {
-        this.doActions(req, rule);
-      }
-    });
+    req = this.parseInput(input);
+    this.tranformRequest(req);
   },
-
   parseInput(input) {
     const data = this.readData(input);
     return this.parser(data);
   },
   readData(input) {
     if (this.io === OPTIONS.IO.FILE) {
+      if (!isString(input)) {
+        throw new InvalidValueError(`invalid input type: ${typeof input}, should be string`);
+      }
       try {
         const data = fs.readFileSync(input, 'utf8');
         return data;
@@ -129,9 +143,39 @@ HTTPTransformer.prototype = {
     }
     return parser;
   },
+  tranformRequest(req) {
+    this.rules.forEach((rule) => {
+      if (this.matchCondition(req, rule)) {
+        this.doActions(req, rule);
+      }
+    });
+  },
   matchCondition(req, rule) {
-    if ('condition' in rule) {
-      rule.condition.forEach();
+    if ('conditions' in rule) {
+      const keys = Object.keys(rule.conditions);
+      for (let i = 0; i < keys.length; i += 1) {
+        const key = keys[i];
+        const condition = rule.conditions[key];
+        switch (key) {
+          case 'domain':
+            if (!condition.includes(req.getDomain())) {
+              return false;
+            }
+            break;
+          case 'path':
+            if (!condition.includes(req.getPath())) {
+              return false;
+            }
+            break;
+          case 'method':
+            if (!condition.includes(req.getMethod())) {
+              return false;
+            }
+            break;
+          default:
+            throw new InvalidValueError(`unsurported condition: ${key}, should be "domain"|"path"|"method"`);
+        }
+      }
     }
     return true;
   },
@@ -145,13 +189,39 @@ HTTPTransformer.prototype = {
 };
 
 const httprule = {
-  request,
   createTranformer: (opt) => new HTTPTransformer(opt),
   updatePath(path) {
+    if (!isString(path)) {
+      throw new InvalidValueError(`invalid path type: ${typeof path}, should be string`);
+    }
     return (req) => {
       req.setPath(path);
     };
   },
+  hasCookie(key) {
+    if (!isString(key)) {
+      throw new InvalidValueError(`invalid cookie key type: ${typeof key}, should be string`);
+    }
+    return (req) => {
+      if (!req.hasCookie(key)) {
+        throw new RuleViolationError(`request does not have cookie: ${key}`);
+      }
+    };
+  },
+  refererBelongsTo(domain) {
+    if (!isString(domain)) {
+      throw new InvalidValueError(`invalid referer type: ${typeof domain}, should be string`);
+    }
+    return (req) => {
+      if (!req.refererBelongsTo(domain)) {
+        throw new RuleViolationError(`request referer does not belongs to: ${domain}`);
+      }
+    };
+  },
+  RuleViolationError,
 };
 
 export default httprule;
+export {
+  METHODS,
+};

@@ -2,6 +2,7 @@ import {
   URL,
 } from 'url';
 import yaml from 'js-yaml';
+import cookie from 'cookie';
 
 function Request(domain, path, method, headers) {
   this.domain = domain;
@@ -12,11 +13,41 @@ function Request(domain, path, method, headers) {
 
 Request.prototype = {
   constructor: Request,
-  setURL(url) {
-    this.url = url;
+  getDomain() {
+    return this.domain;
+  },
+  setDomain(domain) {
+    this.domain = domain;
+  },
+  getPath() {
+    return this.path;
   },
   setPath(path) {
     this.path = path;
+  },
+  getMethod() {
+    return this.method;
+  },
+  setMethod(method) {
+    this.method = method;
+  },
+  hasCookie(key) {
+    if (this.headers && 'Cookie' in this.headers) {
+      const cookies = cookie.parse(this.headers.Cookie);
+      if (key in cookies) {
+        return true;
+      }
+    }
+    return false;
+  },
+  refererBelongsTo(domain) {
+    if (this.headers && 'referer' in this.headers) {
+      const refererURL = new URL(this.headers.referer);
+      if (refererURL.hostname === domain) {
+        return true;
+      }
+    }
+    return false;
   },
 };
 
