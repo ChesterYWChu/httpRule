@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <url>http://www.shopback.com/some/resource?q=1</url>
+  <method>POST</method>
+  <headers>
+    <Content-Type>application/json</Content-Type>
+    <Cookie>name=value; name2=value2; name3=value3</Cookie>
+    <X-SHOPBACK-AGENT>anything</X-SHOPBACK-AGENT>
+  </headers>
+</root>
