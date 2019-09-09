@@ -79,6 +79,18 @@ Request.prototype = {
     }
     return false;
   },
+  // action: check if the target cookie value equals to one of the values
+  hasCookieWithValues(key, values) {
+    if (this.headers && 'Cookie' in this.headers) {
+      const cookies = cookie.parse(this.headers.Cookie);
+      if (key in cookies) {
+        if (values.includes(cookies[key])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  },
   // action: check if referer is belongs to target domain
   refererBelongsTo(domain) {
     if ('referer' in this.headers) {

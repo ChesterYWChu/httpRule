@@ -1,10 +1,11 @@
 # httpRule
-a middleware to tranform http request
+a middleware to transform http request
 
 ### Features
 * configurable transform rules
-* support file input/output
+* support file path as input/output
 * support Readable/Writable stream as input/output
+* support both synchronously and asynchronously transform
 * support json/yaml format data
 * support adding custom data format parser/dumper (ex: XML)
 * support domain and path url-pattern filtering
@@ -51,18 +52,24 @@ a middleware to tranform http request
   // add multiple rules
   tf.addRules([{
     conditions: {
-      method: [httprule.METHODS.GET],
+      method: [httprule.METHODS.POST, httprule.METHODS.PUT],
       path: ['/shopback/resource'],
     },
     actions: [
       httprule.updatePath('/shopback/static/assets'),
+      httprule.hasHeader('Content-Type'),
     ],
   },{
+    // use url-pattern to filter path
+    conditions: {
+      path: ['/shopback/api/*'],
+    },
     // add a header with current timestamp as value
     actions: [
       httprule.addHeader('X-SHOPBACK-TIMESTAMP', () => new Date().getTime()),
     ],
   }]);
+
   // asynchronously transform json request from input file, and write result to output file
   tf.transform('input/file/path', 'output/file/path', null, (err) => {
     console.log(err);
@@ -83,6 +90,31 @@ a middleware to tranform http request
   });
 ```
 
+##### use custom XML parser/dumper
+```javascript
+  import xml2js from 'xml2js';
+
+  ...
+
+  // set custom XML parser
+  tf.setParser((data) => {
+    const parser = new xml2js.Parser();
+    parser.parseString(data, function(err,result){
+    return httprule.request.createRequest(
+      result['url'],
+      result['method'],
+      result['headers']
+    ); 
+  });
+  // set custom XML dumper
+  tf.setDumper((requestObject) => {
+    const builder = new xml2js.Builder();
+    return builder.buildObject(requestObject);
+  });
+
+  tf.transformSync('input/file/path', 'output/file/path');
+```
+
 ### Supported Conditions
 * method filtering
 * domain url-pattern filtering
@@ -92,6 +124,7 @@ a middleware to tranform http request
 ### Supported Actions
 * updatePath(path)
 * hasCookie(key)
+* hasCookieWithValues(key, value)
 * refererBelongsTo(domain)
 * addHeader(key, value)
 * removeAllURLQueryString()
@@ -100,4 +133,9 @@ a middleware to tranform http request
 * hasHeader(key)
 * hasHeaderWithValues(key, values)
 * allowDomains(domains)
+
+### Notes
+* Use javascript ES6 syntax and convert to node compatable syntax with babel
+* Use mocha/chai as test framework
+* Follow Airbnb ESLint style
 

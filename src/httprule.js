@@ -264,6 +264,20 @@ const httprule = {
       }
     };
   },
+  // action: check if the target cookie value equals to one of the values
+  hasCookieWithValues(key, values) {
+    if (!utils.isString(key)) {
+      throw new InvalidValueError(`invalid cookie key type: ${typeof key}, should be string`);
+    }
+    if (!utils.isArray(values)) {
+      throw new InvalidValueError(`invalid values type: ${typeof values}, should be Array`);
+    }
+    return (req) => {
+      if (!req.hasCookieWithValues(key, values)) {
+        throw new RuleViolationError(`request does not have cookie key: ${key} with value: ${values}`);
+      }
+    };
+  },
   // action: check if referer is belongs to target domain
   refererBelongsTo(domain) {
     if (!utils.isString(domain)) {
