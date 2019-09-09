@@ -20,7 +20,6 @@ describe('#json file input', () => {
   it('should parse json file into request object', (done) => {
     const tf = httprule.createTranformer({
       format: 'json',
-      io: 'file',
     });
     const req = tf.parseInput('./test/test.json');
     expect(req.getDomain()).to.be.equal('www.shopback.com');
@@ -37,7 +36,6 @@ describe('#json file output', () => {
   it('should dump request object into json file', (done) => {
     const tf = httprule.createTranformer({
       format: 'json',
-      io: 'file',
     });
     const req = request.createRequest(
       'http://www.shopback.com/some/resource?q=1', 'POST', {
@@ -65,7 +63,6 @@ describe('#yaml file input', () => {
   it('should parse yaml file into request object', (done) => {
     const tf = httprule.createTranformer({
       format: 'yaml',
-      io: 'file',
     });
     const req = tf.parseInput('./test/test.yaml');
     expect(req.getDomain()).to.be.equal('www.shopback.com');
@@ -82,7 +79,6 @@ describe('#yaml file output', () => {
   it('should dump request object into yaml file', (done) => {
     const tf = httprule.createTranformer({
       format: 'yaml',
-      io: 'file',
     });
     const req = request.createRequest(
       'http://www.shopback.com/some/resource?q=1', 'POST', {

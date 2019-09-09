@@ -1,18 +1,16 @@
+import {
+  Transform,
+} from 'stream';
 import fs from 'fs';
 import request from './request';
 import utils from './utils';
 
+
 const OPTIONS = {
-  KEY_NAME: 'name',
   KEY_FORMAT: 'format',
   FORMAT: {
     JSON: 'json',
     YAML: 'yaml',
-  },
-  KEY_IO: 'io',
-  IO: {
-    FILE: 'file',
-    STREAM: 'stream',
   },
 };
 
@@ -48,26 +46,17 @@ RuleViolationError.prototype.constructor = RuleViolationError;
 
 function HTTPTransformer(opt) {
   this.format = OPTIONS.FORMAT.JSON;
-  this.io = OPTIONS.IO.FILE;
   if (typeof opt === 'object') {
-    if (OPTIONS.KEY_NAME in opt) {
-      this.name = opt[OPTIONS.KEY_NAME];
-    }
     if (OPTIONS.KEY_FORMAT in opt) {
       if (!Object.values(OPTIONS.FORMAT).includes(opt[OPTIONS.KEY_FORMAT])) {
         throw new InvalidValueError(`unsurported format: ${opt[OPTIONS.KEY_FORMAT]}, should be "json"|"yaml"`);
       }
       this.format = opt[OPTIONS.KEY_FORMAT];
     }
-    if (OPTIONS.KEY_IO in opt) {
-      if (!Object.values(OPTIONS.IO).includes(opt[OPTIONS.KEY_IO])) {
-        throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
-      }
-      this.io = opt[OPTIONS.KEY_IO];
-    }
   }
   [this.parser, this.dumper] = this.loadParserAndDumper(this.format);
   this.rules = [];
+  this.data = '';
 }
 
 HTTPTransformer.prototype = {
@@ -117,9 +106,6 @@ HTTPTransformer.prototype = {
         callback(err);
       });
     });
-    // fetch(output).then((response) => {
-    //   const reader = response.body.getReader();
-    // });
   },
   transformSync(input, output, format) {
     if (!utils.isString(input)) {
@@ -135,6 +121,25 @@ HTTPTransformer.prototype = {
     this.transformRequest(req);
     this.writeOutput(output, req, format);
   },
+  getTransformStream() {
+    const that = this;
+    const transformStream = new Transform({
+      // decodeStrings: true,
+      // objectMode: false,
+      transform(chunk, encoding, callback) {
+        that.data += chunk;
+        callback();
+      },
+      flush(callback) {
+        const req = that.parser(that.data);
+        that.transformRequest(req);
+        this.push(that.dumper(req));
+        that.data = '';
+        callback();
+      },
+    });
+    return transformStream;
+  },
   parseInput(input, format) {
     const data = fs.readFileSync(input, 'utf8');
     let {
@@ -145,31 +150,6 @@ HTTPTransformer.prototype = {
     }
     return parser(data);
   },
-  // readData(input) {
-  //   if (this.io === OPTIONS.IO.FILE) {
-  //     if (!utils.isString(input)) {
-  //       throw new InvalidValueError(`invalid input type: ${typeof input}, should be string`);
-  //     }
-  //     try {
-  //       const data = fs.readFileSync(input, 'utf8');
-  //       return data;
-  //     } catch (err) {
-  //       throw InvalidValueError.prepend(`failed to read file: ${input}`, err);
-  //     }
-  //   }
-  //   if (this.io === OPTIONS.IO.STREAM) {
-  //     if (!utils.isReadableStream(input)) {
-  //       throw new InvalidValueError(`input stream: ${input} is not a Readable Stream`);
-  //     }
-
-  //     let data = '';
-  //     input.on('data', (chunk) => {
-  //       data += chunk.toString();
-  //     });
-  //     return input.on('end', () => data);
-  //   }
-  //   throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
-  // },
   loadParserAndDumper(format) {
     let parser;
     let dumper;
