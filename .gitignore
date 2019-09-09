@@ -3,3 +3,6 @@ node_modules/
 
 # Bundle files
 dist/
+
+# temporary output file from testing
+test/output/

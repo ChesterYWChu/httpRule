@@ -119,7 +119,7 @@ Request.prototype = {
   },
 };
 
-function objToRequestAdapter(obj) {
+function dataobjToRequestAdapter(obj) {
   let url = '';
   let method = '';
   let headers = {};
@@ -135,21 +135,43 @@ function objToRequestAdapter(obj) {
   return new Request(url, method, headers);
 }
 
+function requestToDataobjAdapter(req) {
+  return {
+    url: req.getURL(),
+    method: req.getMethod(),
+    headers: req.getHeaders(),
+  };
+}
+
 function JSONParser(data) {
   const jsonObj = JSON.parse(data);
-  return objToRequestAdapter(jsonObj);
+  return dataobjToRequestAdapter(jsonObj);
+}
+
+function JSONDumper(req) {
+  const dataobj = requestToDataobjAdapter(req);
+  const jsonString = JSON.stringify(dataobj, null, 4);
+  return jsonString;
 }
 
 function YAMLParser(data) {
   const yamlObj = yaml.safeLoad(data, 'utf8');
-  return objToRequestAdapter(yamlObj);
+  return dataobjToRequestAdapter(yamlObj);
+}
+
+function YAMLDumper(req) {
+  const dataobj = requestToDataobjAdapter(req);
+  const yamlString = yaml.safeDump(dataobj);
+  return yamlString;
 }
 
 
 const request = {
   createRequest: (url, method, headers) => new Request(url, method, headers),
   JSONParser,
+  JSONDumper,
   YAMLParser,
+  YAMLDumper,
 };
 
 export default request;

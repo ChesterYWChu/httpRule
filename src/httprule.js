@@ -66,7 +66,7 @@ function HTTPTransformer(opt) {
       this.io = opt[OPTIONS.KEY_IO];
     }
   }
-  this.parser = this.loadParser(this.format);
+  [this.parser, this.dumper] = this.loadParserAndDumper(this.format);
   this.rules = [];
 }
 
@@ -79,10 +79,20 @@ HTTPTransformer.prototype = {
   addRule(rule) {
     this.rules.push(rule);
   },
-  transform(input) {
+  // transformSync(input, output) {
+  //   let req = {};
+  //   req = this.parseInput(input);
+  //   this.transformRequest(req);
+  //   this.writeOutput(output);
+  // fetch(output).then((response) => {
+  //   const reader = response.body.getReader();
+  // });
+  // },
+  transform(input, output) {
     let req = {};
     req = this.parseInput(input);
     this.transformRequest(req);
+    this.writeOutput(output, req);
   },
   parseInput(input) {
     const data = this.readData(input);
@@ -113,19 +123,26 @@ HTTPTransformer.prototype = {
     }
     throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
   },
-  loadParser(format) {
+  loadParserAndDumper(format) {
     let parser;
+    let dumper;
     switch (format) {
       case OPTIONS.FORMAT.JSON:
         parser = request.JSONParser;
+        dumper = request.JSONDumper;
         break;
       case OPTIONS.FORMAT.YAML:
         parser = request.YAMLParser;
+        dumper = request.YAMLDumper;
         break;
       default:
         throw new InvalidValueError(`unsurported format: ${format}, should be "json"|"yaml"`);
     }
-    return parser;
+    return [parser, dumper];
+  },
+  writeOutput(output, req) {
+    const data = this.dumper(req);
+    fs.writeFileSync(output, data, 'utf8');
   },
   transformRequest(req) {
     this.rules.forEach((rule) => {

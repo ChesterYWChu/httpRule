@@ -1,10 +1,20 @@
 import {
   expect,
 } from 'chai';
+import fs from 'fs';
 import httprule, {
   METHODS,
 } from '../src/httprule';
 import request from '../src/request';
+
+
+const outputDir = './test/output';
+
+function createOuputDir() {
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir);
+  }
+}
 
 describe('#json file input', () => {
   it('should parse json file into request object', (done) => {
@@ -23,6 +33,34 @@ describe('#json file input', () => {
   });
 });
 
+describe('#json file output', () => {
+  it('should dump request object into json file', (done) => {
+    const tf = httprule.createTranformer({
+      format: 'json',
+      io: 'file',
+    });
+    const req = request.createRequest(
+      'http://www.shopback.com/some/resource?q=1', 'POST', {
+        Cookie: 'name=value; name2=value2; name3=value3',
+        'Content-Type': 'application/json',
+        'X-SHOPBACK-AGENT': 'anything',
+      },
+    );
+    createOuputDir();
+    const outputPath = `${outputDir}/testOutput.json`;
+    tf.writeOutput(outputPath, req);
+
+    const outputReq = tf.parseInput(outputPath);
+    expect(outputReq.getDomain()).to.be.equal('www.shopback.com');
+    expect(outputReq.getPath()).to.be.equal('/some/resource');
+    expect(outputReq.getMethod()).to.be.equal('POST');
+    expect(outputReq.getHeaders().Cookie).to.be.equal('name=value; name2=value2; name3=value3');
+    expect(outputReq.getHeaders()['Content-Type']).to.be.equal('application/json');
+    expect(outputReq.getHeaders()['X-SHOPBACK-AGENT']).to.be.equal('anything');
+    done();
+  });
+});
+
 describe('#yaml file input', () => {
   it('should parse yaml file into request object', (done) => {
     const tf = httprule.createTranformer({
@@ -36,6 +74,34 @@ describe('#yaml file input', () => {
     expect(req.getHeaders().Cookie).to.be.equal('name=value; name2=value2; name3=value3');
     expect(req.getHeaders()['Content-Type']).to.be.equal('application/json');
     expect(req.getHeaders()['X-SHOPBACK-AGENT']).to.be.equal('anything');
+    done();
+  });
+});
+
+describe('#yaml file output', () => {
+  it('should dump request object into yaml file', (done) => {
+    const tf = httprule.createTranformer({
+      format: 'yaml',
+      io: 'file',
+    });
+    const req = request.createRequest(
+      'http://www.shopback.com/some/resource?q=1', 'POST', {
+        Cookie: 'name=value; name2=value2; name3=value3',
+        'Content-Type': 'application/json',
+        'X-SHOPBACK-AGENT': 'anything',
+      },
+    );
+    createOuputDir();
+    const outputPath = `${outputDir}/testOutput.yaml`;
+    tf.writeOutput(outputPath, req);
+
+    const outputReq = tf.parseInput(outputPath);
+    expect(outputReq.getDomain()).to.be.equal('www.shopback.com');
+    expect(outputReq.getPath()).to.be.equal('/some/resource');
+    expect(outputReq.getMethod()).to.be.equal('POST');
+    expect(outputReq.getHeaders().Cookie).to.be.equal('name=value; name2=value2; name3=value3');
+    expect(outputReq.getHeaders()['Content-Type']).to.be.equal('application/json');
+    expect(outputReq.getHeaders()['X-SHOPBACK-AGENT']).to.be.equal('anything');
     done();
   });
 });
