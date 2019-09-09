@@ -2,88 +2,98 @@ import {
   expect,
 } from 'chai';
 import fs from 'fs';
-import httprule, {
-  METHODS,
-} from '../src/httprule';
+import httprule from '../src/httprule';
 
 
 const outputDir = './test/output';
 
+// create a new output directory if not exist
 function createOuputDir() {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir);
   }
 }
 
+// return a default transformer with 10 default rules
 function getDefaultTransformer(format) {
-  const tf = httprule.createTranformer({
+  const tf = httprule.createTransformer({
     format,
   });
 
   tf.addRules([{
+    // rule 1
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
       path: ['/shopback/resource'],
     },
     actions: [
       httprule.updatePath('/shopback/static/assets'),
     ],
   }, {
+    // rule 2
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
       path: ['/shopback/me'],
     },
     actions: [
       httprule.hasCookie('sbcookie'),
     ],
   }, {
+    // rule 3
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
     },
     actions: [
       httprule.refererBelongsTo('www.shopback.com'),
     ],
   }, {
+    // rule 4
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
       path: ['/shopback/api/*'],
     },
     actions: [
       httprule.addHeader('From', 'hello@shopback.com'),
     ],
   }, {
+    // rule 5
     conditions: {
-      method: [METHODS.POST, METHODS.PUT],
+      method: [httprule.METHODS.POST, httprule.METHODS.PUT],
     },
     actions: [
       httprule.removeAllURLQueryString(),
     ],
   }, {
+    // rule 6
     conditions: {
-      method: [METHODS.POST, METHODS.PUT],
+      method: [httprule.METHODS.POST, httprule.METHODS.PUT],
     },
     actions: [
       httprule.hasHeader('X-SHOPBACK-AGENT'),
     ],
   }, {
+    // rule 7
     conditions: {
-      method: [METHODS.POST, METHODS.PUT],
+      method: [httprule.METHODS.POST, httprule.METHODS.PUT],
     },
     actions: [
       httprule.hasHeaderWithValues('Content-Type', ['application/json']),
     ],
   }, {
+    // rule 8
     conditions: {
-      method: [METHODS.DELETE],
+      method: [httprule.METHODS.DELETE],
     },
     actions: [
       httprule.hasHeaderWithValues('X-SHOPBACK-AGENT', ['AGENT_1', 'AGENT_2']),
     ],
   }, {
+    // rule 9
     actions: [
       httprule.addHeader('X-SHOPBACK-TIMESTAMP', () => new Date().getTime()),
     ],
   }, {
+    // rule 10
     actions: [
       httprule.allowDomains(['www.shopback.com', 'www.shopback.com.tw']),
     ],
@@ -91,14 +101,14 @@ function getDefaultTransformer(format) {
   return tf;
 }
 
-describe('#transform synchronously', () => {
+describe('#E2E Test: transform synchronously', () => {
   it('should transform request correctly', (done) => {
     const tf = getDefaultTransformer('json');
 
     createOuputDir();
     const outputPath = `${outputDir}/transformSynchronously.json`;
     const startTime = new Date().getTime();
-    tf.transformSync('./test/test.json', outputPath);
+    tf.transformSync('./test/input/test.json', outputPath);
 
     const outputReq = tf.parseInput(outputPath);
     expect(outputReq.getDomain()).to.be.equal('www.shopback.com');
@@ -111,14 +121,14 @@ describe('#transform synchronously', () => {
   });
 });
 
-describe('#transform asynchronously', () => {
+describe('#E2E Test: transform asynchronously', () => {
   it('should transform request correctly', (done) => {
     const tf = getDefaultTransformer('json');
 
     createOuputDir();
     const outputPath = `${outputDir}/transformAsynchronously.json`;
     const startTime = new Date().getTime();
-    tf.transform('./test/test.json', outputPath, null, (err) => {
+    tf.transform('./test/input/test.json', outputPath, null, (err) => {
       expect(err).to.be.equal(null);
       const outputReq = tf.parseInput(outputPath);
       expect(outputReq.getDomain()).to.be.equal('www.shopback.com');
@@ -132,14 +142,14 @@ describe('#transform asynchronously', () => {
   });
 });
 
-describe('#transform by stream with json format', () => {
+describe('#E2E Test: transform by stream with json format', () => {
   it('should transform input json stream and pipe to output stream', (done) => {
     const tf = getDefaultTransformer('json');
 
 
     const outputPath = `${outputDir}/transformByStream.json`;
     const startTime = new Date().getTime();
-    const inputFileStream = fs.createReadStream('./test/test.json');
+    const inputFileStream = fs.createReadStream('./test/input/test.json');
     const outputFileStream = fs.createWriteStream(outputPath);
 
     const tfStream = tf.getTransformStream();
@@ -156,14 +166,14 @@ describe('#transform by stream with json format', () => {
   });
 });
 
-describe('#transform by stream with yaml format', () => {
+describe('#E2E Test: transform by stream with yaml format', () => {
   it('should transform input yaml stream and pipe to output stream', (done) => {
     const tf = getDefaultTransformer('yaml');
 
 
     const outputPath = `${outputDir}/transformByStream.yaml`;
     const startTime = new Date().getTime();
-    const inputFileStream = fs.createReadStream('./test/test.yaml');
+    const inputFileStream = fs.createReadStream('./test/input/test.yaml');
     const outputFileStream = fs.createWriteStream(outputPath);
 
     const tfStream = tf.getTransformStream();

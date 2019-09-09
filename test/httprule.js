@@ -2,14 +2,13 @@ import {
   expect,
 } from 'chai';
 import fs from 'fs';
-import httprule, {
-  METHODS,
-} from '../src/httprule';
+import httprule from '../src/httprule';
 import request from '../src/request';
 
 
 const outputDir = './test/output';
 
+// create a new output directory if not exist
 function createOuputDir() {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir);
@@ -18,10 +17,10 @@ function createOuputDir() {
 
 describe('#json file input', () => {
   it('should parse json file into request object', (done) => {
-    const tf = httprule.createTranformer({
+    const tf = httprule.createTransformer({
       format: 'json',
     });
-    const req = tf.parseInput('./test/test.json');
+    const req = tf.parseInput('./test/input/test.json');
     expect(req.getDomain()).to.be.equal('www.shopback.com');
     expect(req.getPath()).to.be.equal('/some/resource');
     expect(req.getMethod()).to.be.equal('POST');
@@ -34,7 +33,7 @@ describe('#json file input', () => {
 
 describe('#json file output', () => {
   it('should dump request object into json file', (done) => {
-    const tf = httprule.createTranformer({
+    const tf = httprule.createTransformer({
       format: 'json',
     });
     const req = request.createRequest(
@@ -61,10 +60,10 @@ describe('#json file output', () => {
 
 describe('#yaml file input', () => {
   it('should parse yaml file into request object', (done) => {
-    const tf = httprule.createTranformer({
+    const tf = httprule.createTransformer({
       format: 'yaml',
     });
-    const req = tf.parseInput('./test/test.yaml');
+    const req = tf.parseInput('./test/input/test.yaml');
     expect(req.getDomain()).to.be.equal('www.shopback.com');
     expect(req.getPath()).to.be.equal('/some/resource');
     expect(req.getMethod()).to.be.equal('POST');
@@ -77,7 +76,7 @@ describe('#yaml file input', () => {
 
 describe('#yaml file output', () => {
   it('should dump request object into yaml file', (done) => {
-    const tf = httprule.createTranformer({
+    const tf = httprule.createTransformer({
       format: 'yaml',
     });
     const req = request.createRequest(
@@ -103,10 +102,10 @@ describe('#yaml file output', () => {
 });
 
 describe('#rule 1 - update path', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
       path: ['/shopback/resource'],
     },
     actions: [
@@ -154,10 +153,10 @@ describe('#rule 1 - update path', () => {
 
 
 describe('#rule 2 - has cookie sbcookie', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
       path: ['/shopback/me'],
     },
     actions: [
@@ -192,10 +191,10 @@ describe('#rule 2 - has cookie sbcookie', () => {
 });
 
 describe('#rule 3 - referer belongs to www.shopback.com', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
     },
     actions: [
       httprule.refererBelongsTo('www.shopback.com'),
@@ -238,10 +237,10 @@ describe('#rule 3 - referer belongs to www.shopback.com', () => {
 });
 
 describe('#rule 4 - add header: From', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.GET],
+      method: [httprule.METHODS.GET],
       path: ['/shopback/api/*'],
     },
     actions: [
@@ -277,10 +276,10 @@ describe('#rule 4 - add header: From', () => {
 });
 
 describe('#rule 5 - remove all url query string', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.POST, METHODS.PUT],
+      method: [httprule.METHODS.POST, httprule.METHODS.PUT],
     },
     actions: [
       httprule.removeAllURLQueryString(),
@@ -313,10 +312,10 @@ describe('#rule 5 - remove all url query string', () => {
 });
 
 describe('#rule 6 - has header', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.POST, METHODS.PUT],
+      method: [httprule.METHODS.POST, httprule.METHODS.PUT],
     },
     actions: [
       httprule.hasHeader('X-SHOPBACK-AGENT'),
@@ -351,10 +350,10 @@ describe('#rule 6 - has header', () => {
 });
 
 describe('#rule 7 - has header value', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.POST, METHODS.PUT],
+      method: [httprule.METHODS.POST, httprule.METHODS.PUT],
     },
     actions: [
       httprule.hasHeaderWithValues('Content-Type', ['application/json']),
@@ -390,10 +389,10 @@ describe('#rule 7 - has header value', () => {
 });
 
 describe('#rule 8 - has header value for DELETE method', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {
-      method: [METHODS.DELETE],
+      method: [httprule.METHODS.DELETE],
     },
     actions: [
       httprule.hasHeaderWithValues('X-SHOPBACK-AGENT', ['AGENT_1', 'AGENT_2']),
@@ -429,7 +428,7 @@ describe('#rule 8 - has header value for DELETE method', () => {
 });
 
 describe('#rule 9 - add header with value function', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {},
     actions: [
@@ -463,7 +462,7 @@ describe('#rule 9 - add header with value function', () => {
 });
 
 describe('#rule 10 - allow domains', () => {
-  const tf = httprule.createTranformer();
+  const tf = httprule.createTransformer();
   tf.addRule({
     conditions: {},
     actions: [

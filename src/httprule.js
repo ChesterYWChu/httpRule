@@ -5,7 +5,7 @@ import fs from 'fs';
 import request from './request';
 import utils from './utils';
 
-
+// transformer config constants
 const OPTIONS = {
   KEY_FORMAT: 'format',
   FORMAT: {
@@ -14,13 +14,7 @@ const OPTIONS = {
   },
 };
 
-const METHODS = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  DELETE: 'DELETE',
-};
-
+// invalid config value error
 function InvalidValueError(message) {
   this.message = message;
   this.name = 'InvalidValueError';
@@ -36,6 +30,7 @@ InvalidValueError.prepend = (message, error) => {
   return error;
 };
 
+// rule violation error
 function RuleViolationError(message) {
   this.message = message;
   this.name = 'RuleViolationError';
@@ -44,6 +39,7 @@ function RuleViolationError(message) {
 RuleViolationError.prototype = Object.create(Error.prototype);
 RuleViolationError.prototype.constructor = RuleViolationError;
 
+// HTTPTransformer constructor
 function HTTPTransformer(opt) {
   this.format = OPTIONS.FORMAT.JSON;
   if (typeof opt === 'object') {
@@ -59,18 +55,18 @@ function HTTPTransformer(opt) {
   this.data = '';
 }
 
+// HTTPTransformer properties
 HTTPTransformer.prototype = {
   constructor: HTTPTransformer,
-  sayHello() {
-    return `Hello ${this.name}`;
-  },
-
+  // add rule to transformer, rule: object
   addRule(rule) {
     this.rules.push(rule);
   },
+  // add multiple rules to transformer, rules:Array of object
   addRules(rules) {
     this.rules.push(...rules);
   },
+  // transform request asynchronously
   transform(input, output, format, callback) {
     if (!utils.isString(input)) {
       callback(new InvalidValueError(`invalid input type: ${typeof input}, should be string`));
@@ -107,6 +103,7 @@ HTTPTransformer.prototype = {
       });
     });
   },
+  // transform request synchronously
   transformSync(input, output, format) {
     if (!utils.isString(input)) {
       throw new InvalidValueError(`invalid input type: ${typeof input}, should be string`);
@@ -121,6 +118,7 @@ HTTPTransformer.prototype = {
     this.transformRequest(req);
     this.writeOutput(output, req, format);
   },
+  // return an instance of transform type stream to handle input/output stream
   getTransformStream() {
     const that = this;
     const transformStream = new Transform({
@@ -140,6 +138,7 @@ HTTPTransformer.prototype = {
     });
     return transformStream;
   },
+  // parser input file into request object
   parseInput(input, format) {
     const data = fs.readFileSync(input, 'utf8');
     let {
@@ -150,6 +149,7 @@ HTTPTransformer.prototype = {
     }
     return parser(data);
   },
+  // return parser/dumper according to input format
   loadParserAndDumper(format) {
     let parser;
     let dumper;
@@ -167,6 +167,7 @@ HTTPTransformer.prototype = {
     }
     return [parser, dumper];
   },
+  // write request object into output file
   writeOutput(output, req, format) {
     let {
       dumper,
@@ -178,6 +179,7 @@ HTTPTransformer.prototype = {
     const data = dumper(req);
     fs.writeFileSync(output, data, 'utf8');
   },
+  // transform input request object by rules, return transformed request object
   transformRequest(req) {
     this.rules.forEach((rule) => {
       if (this.matchCondition(req, rule)) {
@@ -185,6 +187,7 @@ HTTPTransformer.prototype = {
       }
     });
   },
+  // check if the request object match the rule conditions
   matchCondition(req, rule) {
     if ('conditions' in rule) {
       const keys = Object.keys(rule.conditions);
@@ -214,6 +217,7 @@ HTTPTransformer.prototype = {
     }
     return true;
   },
+  // excute rule actions
   doActions(req, rule) {
     if ('actions' in rule) {
       rule.actions.forEach((action) => {
@@ -224,7 +228,15 @@ HTTPTransformer.prototype = {
 };
 
 const httprule = {
-  createTranformer: (opt) => new HTTPTransformer(opt),
+  // http methods
+  METHODS: {
+    GET: 'GET',
+    POST: 'POST',
+    PUT: 'PUT',
+    DELETE: 'DELETE',
+  },
+  // create transformer instance
+  createTransformer: (opt) => new HTTPTransformer(opt),
   updatePath(path) {
     if (!utils.isString(path)) {
       throw new InvalidValueError(`invalid path type: ${typeof path}, should be string`);
@@ -233,6 +245,7 @@ const httprule = {
       req.setPath(path);
     };
   },
+  // action: check if target key exist in header cookie
   hasCookie(key) {
     if (!utils.isString(key)) {
       throw new InvalidValueError(`invalid cookie key type: ${typeof key}, should be string`);
@@ -243,6 +256,7 @@ const httprule = {
       }
     };
   },
+  // action: check if referer is belongs to target domain
   refererBelongsTo(domain) {
     if (!utils.isString(domain)) {
       throw new InvalidValueError(`invalid referer type: ${typeof domain}, should be string`);
@@ -253,6 +267,8 @@ const httprule = {
       }
     };
   },
+  // action: add a header with key and value
+  // key:string, value:string or a callback function that returns a string
   addHeader(key, value) {
     if (!utils.isString(key)) {
       throw new InvalidValueError(`invalid header key type: ${typeof key}, should be string`);
@@ -264,11 +280,25 @@ const httprule = {
       req.addHeader(key, value);
     };
   },
+  // action: remove all query strings in url
   removeAllURLQueryString() {
     return (req) => {
       req.removeAllURLQueryString();
     };
   },
+  // action: add an url query string
+  addURLQueryString(key, value) {
+    return (req) => {
+      req.addURLQueryString(key, value);
+    };
+  },
+  // action: delete an url query string
+  deleteURLQueryString(key) {
+    return (req) => {
+      req.deleteURLQueryString(key);
+    };
+  },
+  // action: check if target key exist in headers
   hasHeader(key) {
     if (!utils.isString(key)) {
       throw new InvalidValueError(`invalid header key type: ${typeof key}, should be string`);
@@ -279,6 +309,7 @@ const httprule = {
       }
     };
   },
+  // action: check if the target header value equals to one of the values
   hasHeaderWithValues(key, values) {
     if (!utils.isString(key)) {
       throw new InvalidValueError(`invalid header key type: ${typeof key}, should be string`);
@@ -292,6 +323,7 @@ const httprule = {
       }
     };
   },
+  // action: check if the domain is in allowed domains
   allowDomains(domains) {
     if (!utils.isArray(domains)) {
       throw new InvalidValueError(`invalid allow domains type: ${typeof domains}, should be Array`);
@@ -306,6 +338,3 @@ const httprule = {
 };
 
 export default httprule;
-export {
-  METHODS,
-};
