@@ -167,6 +167,12 @@ HTTPTransformer.prototype = {
     }
     return [parser, dumper];
   },
+  setCustomParser(parser) {
+    this.parser = parser;
+  },
+  setCustomDumper(dumper) {
+    this.dumper = dumper;
+  },
   // write request object into output file
   writeOutput(output, req, format) {
     let {
@@ -228,6 +234,8 @@ HTTPTransformer.prototype = {
 };
 
 const httprule = {
+  // sub module - request
+  request,
   // http methods
   METHODS: {
     GET: 'GET',
