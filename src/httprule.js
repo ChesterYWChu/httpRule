@@ -79,50 +79,97 @@ HTTPTransformer.prototype = {
   addRule(rule) {
     this.rules.push(rule);
   },
-  // transformSync(input, output) {
-  //   let req = {};
-  //   req = this.parseInput(input);
-  //   this.transformRequest(req);
-  //   this.writeOutput(output);
-  // fetch(output).then((response) => {
-  //   const reader = response.body.getReader();
-  // });
-  // },
-  transform(input, output) {
-    let req = {};
-    req = this.parseInput(input);
-    this.transformRequest(req);
-    this.writeOutput(output, req);
+  addRules(rules) {
+    this.rules.push(...rules);
   },
-  parseInput(input) {
-    const data = this.readData(input);
-    return this.parser(data);
-  },
-  readData(input) {
-    if (this.io === OPTIONS.IO.FILE) {
-      if (!utils.isString(input)) {
-        throw new InvalidValueError(`invalid input type: ${typeof input}, should be string`);
-      }
-      try {
-        const data = fs.readFileSync(input, 'utf8');
-        return data;
-      } catch (err) {
-        throw InvalidValueError.prepend(`failed to read file: ${input}`, err);
-      }
+  transform(input, output, format, callback) {
+    if (!utils.isString(input)) {
+      callback(new InvalidValueError(`invalid input type: ${typeof input}, should be string`));
     }
-    if (this.io === OPTIONS.IO.STREAM) {
-      if (!utils.isReadableStream(input)) {
-        throw new InvalidValueError(`input stream: ${input} is not a Readable Stream`);
+    if (!utils.isString(output)) {
+      callback(new InvalidValueError(`invalid output type: ${typeof output}, should be string`));
+    }
+    if (format && !utils.isString(format)) {
+      callback(new InvalidValueError(`invalid format type: ${typeof format}, should be string`));
+    }
+    fs.readFile(input, 'utf8', (error, data) => {
+      if (error) {
+        callback(error);
+      }
+      let outputData;
+      try {
+        let [parser, dumper] = [this.parser, this.dumper];
+        if (format) {
+          [parser, dumper] = this.loadParserAndDumper(format);
+        }
+        // parse data
+        const req = parser(data);
+
+        // transform request
+        this.transformRequest(req);
+        outputData = dumper(req);
+      } catch (err) {
+        callback(err);
       }
 
-      let data = '';
-      input.on('data', (chunk) => {
-        data += chunk.toString();
+      // dump outputdata to file
+      fs.writeFile(output, outputData, 'utf8', (err) => {
+        callback(err);
       });
-      return input.on('end', () => data);
-    }
-    throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
+    });
+    // fetch(output).then((response) => {
+    //   const reader = response.body.getReader();
+    // });
   },
+  transformSync(input, output, format) {
+    if (!utils.isString(input)) {
+      throw new InvalidValueError(`invalid input type: ${typeof input}, should be string`);
+    }
+    if (!utils.isString(output)) {
+      throw new InvalidValueError(`invalid output type: ${typeof output}, should be string`);
+    }
+    if (format && !utils.isString(format)) {
+      throw new InvalidValueError(`invalid output type: ${typeof format}, should be string`);
+    }
+    const req = this.parseInput(input, format);
+    this.transformRequest(req);
+    this.writeOutput(output, req, format);
+  },
+  parseInput(input, format) {
+    const data = fs.readFileSync(input, 'utf8');
+    let {
+      parser,
+    } = this;
+    if (format) {
+      [parser] = this.loadParserAndDumper(format);
+    }
+    return parser(data);
+  },
+  // readData(input) {
+  //   if (this.io === OPTIONS.IO.FILE) {
+  //     if (!utils.isString(input)) {
+  //       throw new InvalidValueError(`invalid input type: ${typeof input}, should be string`);
+  //     }
+  //     try {
+  //       const data = fs.readFileSync(input, 'utf8');
+  //       return data;
+  //     } catch (err) {
+  //       throw InvalidValueError.prepend(`failed to read file: ${input}`, err);
+  //     }
+  //   }
+  //   if (this.io === OPTIONS.IO.STREAM) {
+  //     if (!utils.isReadableStream(input)) {
+  //       throw new InvalidValueError(`input stream: ${input} is not a Readable Stream`);
+  //     }
+
+  //     let data = '';
+  //     input.on('data', (chunk) => {
+  //       data += chunk.toString();
+  //     });
+  //     return input.on('end', () => data);
+  //   }
+  //   throw new InvalidValueError(`unsurported IO type: ${this.io}, should be "file"|"stream"`);
+  // },
   loadParserAndDumper(format) {
     let parser;
     let dumper;
@@ -140,8 +187,15 @@ HTTPTransformer.prototype = {
     }
     return [parser, dumper];
   },
-  writeOutput(output, req) {
-    const data = this.dumper(req);
+  writeOutput(output, req, format) {
+    let {
+      dumper,
+    } = this;
+    if (format) {
+      // eslint-disable-next-line no-undef
+      [parser, dumper] = this.loadParserAndDumper(format);
+    }
+    const data = dumper(req);
     fs.writeFileSync(output, data, 'utf8');
   },
   transformRequest(req) {
