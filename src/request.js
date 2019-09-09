@@ -179,35 +179,31 @@ function requestToDataobjAdapter(req) {
   };
 }
 
-// parse json string into request object
+// parse json string into data object
 function JSONParser(data) {
-  const jsonObj = JSON.parse(data);
-  return dataobjToRequestAdapter(jsonObj);
+  return JSON.parse(data);
 }
 
-// dump request object into json string
-function JSONDumper(req) {
-  const dataobj = requestToDataobjAdapter(req);
-  const jsonString = JSON.stringify(dataobj, null, 4);
-  return jsonString;
+// dump data object into json string
+function JSONDumper(dataObj) {
+  return JSON.stringify(dataObj, null, 4);
 }
 
-// parse yaml string into request object
+// parse yaml string into data object
 function YAMLParser(data) {
-  const yamlObj = yaml.safeLoad(data, 'utf8');
-  return dataobjToRequestAdapter(yamlObj);
+  return yaml.safeLoad(data, 'utf8');
 }
 
-// dump request object into yaml string
-function YAMLDumper(req) {
-  const dataobj = requestToDataobjAdapter(req);
-  const yamlString = yaml.safeDump(dataobj);
-  return yamlString;
+// dump data object into yaml string
+function YAMLDumper(dataObj) {
+  return yaml.safeDump(dataObj);
 }
 
 
 const request = {
   createRequest: (url, method, headers) => new Request(url, method, headers),
+  dataobjToRequestAdapter,
+  requestToDataobjAdapter,
   JSONParser,
   JSONDumper,
   YAMLParser,

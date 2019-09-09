@@ -43,7 +43,7 @@ RuleViolationError.prototype.constructor = RuleViolationError;
 function HTTPTransformer(opt) {
   this.format = OPTIONS.FORMAT.JSON;
   if (typeof opt === 'object') {
-    if (OPTIONS.KEY_FORMAT in opt) {
+    if (OPTIONS.KEY_FORMAT in opt && opt[OPTIONS.KEY_FORMAT]) {
       if (!Object.values(OPTIONS.FORMAT).includes(opt[OPTIONS.KEY_FORMAT])) {
         throw new InvalidValueError(`unsurported format: ${opt[OPTIONS.KEY_FORMAT]}, should be "json"|"yaml"`);
       }
@@ -88,11 +88,13 @@ HTTPTransformer.prototype = {
           [parser, dumper] = this.loadParserAndDumper(format);
         }
         // parse data
-        const req = parser(data);
+        const dataObj = parser(data);
+        const req = request.dataobjToRequestAdapter(dataObj);
 
         // transform request
         this.transformRequest(req);
-        outputData = dumper(req);
+        const outputObj = request.requestToDataobjAdapter(req);
+        outputData = dumper(outputObj);
       } catch (err) {
         callback(err);
       }
@@ -129,9 +131,11 @@ HTTPTransformer.prototype = {
         callback();
       },
       flush(callback) {
-        const req = that.parser(that.data);
+        const dataObj = that.parser(that.data);
+        const req = request.dataobjToRequestAdapter(dataObj);
         that.transformRequest(req);
-        this.push(that.dumper(req));
+        const outputObj = request.requestToDataobjAdapter(req);
+        this.push(that.dumper(outputObj));
         that.data = '';
         callback();
       },
@@ -147,7 +151,8 @@ HTTPTransformer.prototype = {
     if (format) {
       [parser] = this.loadParserAndDumper(format);
     }
-    return parser(data);
+    const dataObj = parser(data);
+    return request.dataobjToRequestAdapter(dataObj);
   },
   // return parser/dumper according to input format
   loadParserAndDumper(format) {
@@ -182,7 +187,8 @@ HTTPTransformer.prototype = {
       // eslint-disable-next-line no-undef
       [parser, dumper] = this.loadParserAndDumper(format);
     }
-    const data = dumper(req);
+    const outputObj = request.requestToDataobjAdapter(req);
+    const data = dumper(outputObj);
     fs.writeFileSync(output, data, 'utf8');
   },
   // transform input request object by rules, return transformed request object
@@ -234,8 +240,6 @@ HTTPTransformer.prototype = {
 };
 
 const httprule = {
-  // sub module - request
-  request,
   // http methods
   METHODS: {
     GET: 'GET',

@@ -10,15 +10,22 @@ a middleware to transform http request
 * support adding custom data format parser/dumper (ex: XML)
 * support domain and path url-pattern filtering
 
-### Build
+### Development
 ```shell
-  npm run build
+  npm install
+  npm run develop
 ```
 
 ### Test
 ```shell
   npm run test
 ```
+
+### Build
+```shell
+  npm run build
+```
+
 
 ### Examples
 ##### if HTTP method is GET and path is '/shopback/resource', update the path to '/shopback/static/assets'
@@ -80,11 +87,18 @@ a middleware to transform http request
 ```javascript
   import fs from 'fs';
 
-  ...
+  // create and config transformer
+  const tf = httprule.createTransformer({});
+
+  // add rules
+  tf.addRules([
+    ...
+  ]);
 
   const tfStream = tf.getTransformStream();
   const inputFileStream = fs.createReadStream('/input/file/path');
-  const outputFileStream = fs.createWriteStream('/output/file/path');  
+  const outputFileStream = fs.createWriteStream('/output/file/path');
+  // pipe input stream to transform stream, then pipe transform result to output stream
   inputFileStream.pipe(tfStream).pipe(outputFileStream).on('finish', () => {
     console.log('finish');
   });
@@ -94,20 +108,28 @@ a middleware to transform http request
 ```javascript
   import xml2js from 'xml2js';
 
+  // create and config transformer
+  const tf = httprule.createTransformer({});
+  
   ...
 
   // set custom XML parser
-  tf.setParser((data) => {
-    const parser = new xml2js.Parser();
-    parser.parseString(data, function(err,result){
-    return httprule.request.createRequest(
-      result['url'],
-      result['method'],
-      result['headers']
-    ); 
+  tf.setCustomParser((data) => {
+    let requestObject;
+    parseXMLString(data, {
+      explicitArray: false,
+    }, (err, result) => {
+      const resultObj = result.root;
+      requestObject = {
+        url: resultObj.url,
+        method: resultObj.method,
+        headers: resultObj.headers,
+      };
+    });
+    return requestObject;
   });
   // set custom XML dumper
-  tf.setDumper((requestObject) => {
+  tf.setCustomDumper((requestObject) => {
     const builder = new xml2js.Builder();
     return builder.buildObject(requestObject);
   });

@@ -2,8 +2,10 @@ import {
   expect,
 } from 'chai';
 import fs from 'fs';
+import xml2js, {
+  parseString as parseXMLString,
+} from 'xml2js';
 import httprule from '../src/httprule';
-
 
 const outputDir = './test/output';
 
@@ -187,5 +189,50 @@ describe('#E2E Test: transform by stream with yaml format', () => {
       expect(outputReq.getHeaders()['X-SHOPBACK-TIMESTAMP']).to.be.at.least(startTime);
       done();
     });
+  });
+});
+
+describe('#E2E Test: transform with custom parser/dumper', () => {
+  it('should be able to transform input xml file', (done) => {
+    const tf = getDefaultTransformer(null);
+
+    // set custom XML parser
+    tf.setCustomParser((data) => {
+      let dataObj;
+      parseXMLString(data, {
+        explicitArray: false,
+      }, (err, result) => {
+        if (err) {
+          throw new Error(`parse XML error: ${err}`);
+        }
+        const resultObj = result.root;
+        dataObj = {
+          url: resultObj.url,
+          method: resultObj.method,
+          headers: resultObj.headers,
+        };
+      });
+      return dataObj;
+    });
+    // set custom XML dumper
+    tf.setCustomDumper((requestObject) => {
+      const builder = new xml2js.Builder();
+      return builder.buildObject(requestObject);
+    });
+
+    createOuputDir();
+    const outputPath = `${outputDir}/transformByCustomXMLParser.xml`;
+    const startTime = new Date().getTime();
+    tf.transformSync('./test/input/test.xml', outputPath);
+
+    const outputReq = tf.parseInput(outputPath);
+    expect(outputReq.getDomain()).to.be.equal('www.shopback.com');
+    expect(outputReq.getPath()).to.be.equal('/some/resource');
+    expect(outputReq.getURL()).to.be.equal('http://www.shopback.com/some/resource');
+
+    expect(outputReq.getHeaders()).to.have.property('X-SHOPBACK-TIMESTAMP');
+    const ts = parseInt(outputReq.getHeaders()['X-SHOPBACK-TIMESTAMP'], 10);
+    expect(ts).to.be.at.least(startTime);
+    done();
   });
 });
